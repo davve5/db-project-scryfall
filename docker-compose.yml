@@ -1,0 +1,23 @@
+services:
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  neo4j:
+    image: neo4j
+    container_name: neo4j
+    restart: always
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - neo4j_data:/data
+
+volumes:
+  mongodb_data:
+  neo4j_data:
