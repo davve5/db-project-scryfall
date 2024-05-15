@@ -1,18 +1,16 @@
-from pymongo import MongoClient
-def get_database():
- 
-   # Provide the mongodb atlas url to connect python to mongodb using pymongo
-   CONNECTION_STRING = "mongodb://localhost:27017/"
-   DB_NAME = "scryfall"
- 
-   # Create a connection using MongoClient. You can import MongoClient or use pymongo.MongoClient
-   client = MongoClient(CONNECTION_STRING)
- 
-   # Create the database for our example (we will use the same database throughout the tutorial
-   return client[DB_NAME]
-  
-# This is added so that many files can reuse the function get_database()
-if __name__ == "__main__":   
-  
-   # Get the database
-   dbname = get_database()
+import os
+from pymongo import MongoClient, database
+
+class MongoManager:
+   __instance:  | None = None
+   
+   @staticmethod 
+   def get_instance() -> database.Database:
+      if MongoManager.__instance == None:
+            MongoManager()
+      return MongoManager.__instance
+   def __init__(self):
+      if MongoManager.__instance != None:
+         raise Exception("This class is a singleton!")
+      else:
+         MongoManager.__instance = MongoClient(os.getenv("MONGODB_URL", "mongodb://localhost:27017/"))[os.getenv("MONGODB_DB_NAME", "mgt")]

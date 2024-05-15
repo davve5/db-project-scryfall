@@ -1,55 +1,61 @@
 from fastapi import APIRouter, status, HTTPException
 from pydantic import BaseModel
-from db.mongo import get_database
+from db.mongo import MongoManager
+from app.utils.jwt import get_password_hash, verify_password, create_access_token
 
 
 class Credentials(BaseModel):
     login: str
     password: str
 		
-router = APIRouter(
-    prefix="/auth",
-)
+router = APIRouter()
 
-db = get_database()
+mongo = MongoManager.get_instance()
 
 @router.post("/login", response_model=Credentials)
 async def login(credentials: Credentials):
-    user = db['users'].find_one({
+    user = mongo['users'].find_one({
         "login": credentials.login
     })
+
 
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect credentials",
         )
+    
+    if not verify_password(credentials.password, user.password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect credentials",
+        )
 
-    return user
+    token = create_access_token(credentials.login)
+
+    return token
 
 
 @router.post("/register/", status_code=status.HTTP_201_CREATED)
 async def register(credentials: Credentials):
     if len(credentials.login) < 3:
-        # raise HTTPException(
-        # status_code=status.HTTP,
-        # detail=f'File {file.filename} has unsupported extension type',
-    # )
         return {"message": "Login has to be at least 3 chars"}
 
     if len(credentials.password) < 8:
         return {"message": "Password has to be at least 8 chars"}
     
-    user = db['users'].find_one({
+    user = mongo['users'].find_one({
         "login": credentials.login
     })
 
     if user is not None: 
         return {"message": "Login is already taken"}
 
-    user = db['users'].insert_one({
+    password = get_password_hash(password)
+
+    user = mongo['users'].insert_one({
         "login": credentials.login,
-        "password": credentials.password,
+        "password": password,
     })
 
     return {"message": "User created successfuly"}
