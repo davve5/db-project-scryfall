@@ -2,4 +2,6 @@ fastapi
 neo4j
 pymongo
 pydantic
-python-dotenv
+jwt
+pillow
+passlib

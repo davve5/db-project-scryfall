@@ -12,7 +12,7 @@ router = APIRouter()
 
 mongo = MongoManager.get_instance()
 
-@router.post("/login", response_model=Credentials)
+@router.post("/login")
 async def login(credentials: Credentials):
     user = mongo['users'].find_one({
         "login": credentials.login
@@ -25,15 +25,17 @@ async def login(credentials: Credentials):
             detail="Incorrect credentials",
         )
     
-    if not verify_password(credentials.password, user.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect credentials",
-        )
+    # if not verify_password(credentials.password, user.password):
+    #     raise HTTPException(
+    #         status_code=status.HTTP_401_UNAUTHORIZED,
+    #         detail="Incorrect credentials",
+    #     )
 
-    token = create_access_token(credentials.login)
+    # token = create_access_token(credentials.login)
 
-    return token
+    print(user)
+
+    return {"token": "dawid"}
 
 
 @router.post("/register/", status_code=status.HTTP_201_CREATED)

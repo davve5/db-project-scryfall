@@ -2,7 +2,7 @@ import os
 from pymongo import MongoClient, database
 
 class MongoManager:
-   __instance:  | None = None
+   __instance: database.Database | None = None
    
    @staticmethod 
    def get_instance() -> database.Database:
