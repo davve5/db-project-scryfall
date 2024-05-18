@@ -53,7 +53,7 @@ async def register(credentials: Credentials):
     if user is not None: 
         return {"message": "Login is already taken"}
 
-    password = get_password_hash(password)
+    # password = get_password_hash(password)
 
     user = mongo['users'].insert_one({
         "login": credentials.login,
