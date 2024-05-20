@@ -2,6 +2,7 @@ fastapi
 neo4j
 pymongo
 pydantic
-jwt
+pyjwt
 pillow
 passlib
+bcrypt

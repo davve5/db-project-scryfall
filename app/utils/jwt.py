@@ -1,8 +1,7 @@
 import os
+import jwt
 from datetime import datetime, timedelta
 from typing import Any
-
-import jwt
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -10,12 +9,28 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "secret123")
 
+# def get_token_from_request(request):
+#     if "Authorization" not in request.headers:
+#         return False
+#     token_header = request.headers["Authorization"]
+#     if token_header.startswith("Bearer "):
+#         return token_header.split("Bearer ")[-1]
+
+# def verify_access_token(request):
+#     token = get_token_from_request(request)
+    
+#     try:
+#         payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+#         return payload
+#     except jwt.ExpiredSignatureError:
+#         raise HTTPException(status_code=401, detail="Token expired")
+#     except jwt.InvalidTokenError:
+#         raise HTTPException(status_code=401, detail="Invalid token")
 
 def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
     expire = datetime.utcnow() + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+    payload = {"exp": expire, "sub": str(subject)}
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
