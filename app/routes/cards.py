@@ -128,7 +128,7 @@ class Card(BaseModel):
 mongo = MongoManager.get_instance()
 
 @router.get("/search/", response_model=list[Card])
-async def search(
+async def search_cards(
     name: Optional[str] = None,
     color_identity: Optional[str] = None,
     rarity: Optional[str] = None,
