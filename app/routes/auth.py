@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
-
 import jwt
 from fastapi import Depends, APIRouter, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jwt.exceptions import InvalidTokenError
 from passlib.context import CryptContext
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from db.mongo import MongoManager
+from bson.objectid import ObjectId
+
+BaseModel.model_config["json_encoders"] = {ObjectId: lambda v: str(v)}
 
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 ALGORITHM = "HS256"
@@ -19,15 +21,19 @@ class Token(BaseModel):
 
 
 class TokenData(BaseModel):
-    username: str | None = None
+    id: str | None = None
 
 
 class User(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    id: ObjectId = Field(alias="_id")
     username: str
 
 
 class UserInDB(User):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     hashed_password: str
+    id: ObjectId = Field(alias="_id")
 
 mongo = MongoManager.get_instance()
 
@@ -46,14 +52,15 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-def get_user(username: str):
-    user = mongo['users'].find_one({ "username": username})
+def get_user(id: str):
+    user = mongo['users'].find_one({ "_id": ObjectId(id)})
     if user:
         return UserInDB(**user)
 
 
 def authenticate_user(username: str, password: str):
-    user = get_user(username)
+    user = mongo['users'].find_one({ "username": username})
+    user = UserInDB(**user)
 
     if not user:
         return False
@@ -80,7 +87,7 @@ def create_user(username: str, password: str):
         "username": username,
     })
 
-    return User(**user)
+    return UserInDB(**user)
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
@@ -101,13 +108,13 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
     )
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None:
+        id: str = payload.get("sub")
+        if id is None:
             raise credentials_exception
-        token_data = TokenData(username=username)
+        token_data = TokenData(id=id)
     except InvalidTokenError:
         raise credentials_exception
-    user = get_user(username=token_data.username)
+    user = get_user(id=token_data.id)
     if user is None:
         raise credentials_exception
     return user
@@ -118,6 +125,7 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
 ) -> Token:
     user = authenticate_user(form_data.username, form_data.password)
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -126,7 +134,7 @@ async def login(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
 
@@ -145,7 +153,7 @@ async def register(
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.username}, expires_delta=access_token_expires
+        data={"sub": str(user.id)}, expires_delta=access_token_expires
     )
     return Token(access_token=access_token, token_type="bearer")
 

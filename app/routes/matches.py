@@ -37,7 +37,5 @@ async def create_user_matches(match_id: str):
 
 
 @router.post("/create")
-async def create_match(match: Match, 
-    current_user: Annotated[User, Depends(get_current_user)]
-    ):
+async def create_match(match: Match, current_user: Annotated[User, Depends(get_current_user)]):
     return "hello games"
