@@ -1,6 +1,8 @@
-from fastapi import APIRouter, status, HTTPException
+from fastapi import APIRouter, status, HTTPException, Depends
 from pydantic import BaseModel
 from db.mongo import MongoManager
+from typing import Annotated
+from app.routes.auth import get_current_user, User
 
 class Match(BaseModel):
     winners_deck: str
@@ -35,5 +37,7 @@ async def create_user_matches(match_id: str):
 
 
 @router.post("/create")
-async def create_match(match: Match):
+async def create_match(match: Match, 
+    current_user: Annotated[User, Depends(get_current_user)]
+    ):
     return "hello games"
