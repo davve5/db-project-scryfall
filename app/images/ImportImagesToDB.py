@@ -23,7 +23,7 @@ def save_image_to_mongodb(image_id, base64_image):
 
     # Jeśli dokument istnieje, zaktualizuj dane binarne obrazu
     if existing_document:
-        collection.update_one({"id": image_id}, {"$set": {"binaryImage": image_binary}})
+        collection.update_one({"id": image_id}, {"$set": {"binary_image": image_binary}})
         print('Dodano zdjecie.')
     else:
         print('Dokument o podanym ID nie istnieje.')
