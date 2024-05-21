@@ -13,4 +13,4 @@ class MongoManager:
       if MongoManager.__instance != None:
          raise Exception("This class is a singleton!")
       else:
-         MongoManager.__instance = MongoClient(os.getenv("MONGODB_URL", "mongodb://localhost:27017/"))[os.getenv("MONGODB_DB_NAME", "mgt")]
+         MongoManager.__instance = MongoClient(os.getenv("MONGODB_URL", "mongodb://localhost:27017/"))[os.getenv("MONGODB_DB_NAME", "mtg")]
