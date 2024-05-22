@@ -7,8 +7,7 @@ from app.routes.auth import get_current_user, User
 from PIL import Image
 import io
 from bson.objectid import ObjectId
-
-# from pymongo import MongoClient
+from db.neo4j import Neo4jManager
 
 class Collection(BaseModel):
     cardName: str
@@ -20,6 +19,19 @@ mongo = MongoManager.get_instance()
 cards = mongo["cards"]
 cards_collection = mongo["cards_collection"]
 
+def create_user_card_relationship(user_id: str, card_id: str):
+    neo4j = Neo4jManager.get_instance()
+    params = { "user_id": str(user_id), "card_id": str(card_id) }
+    neo4j.run(
+        "MATCH (u:User {id: $user_id}), (c:Card {id: $card_id}) CREATE (u)-[:HAS_CARD]->(c)",
+        params
+    )
+    neo4j.run(
+        "MATCH (c:Card {id: $card_id}), (u:User {id: $user_id}) CREATE (c)-[:BELONGS_TO]->(u)",
+        params
+    )
+
+    
 @router.post("/create/")
 async def create(collection: Collection, current_user: Annotated[User, Depends(get_current_user)]):
     duplicate = False
@@ -31,9 +43,11 @@ async def create(collection: Collection, current_user: Annotated[User, Depends(g
     if foundCard != None:
 
         foundCardId = foundCard.get('_id')
-
+        # FIXME: Propably upsert? To be checked
         if foundCollection == None:
             cards_collection.insert_one({ "user_id": current_user.id, "cards_id": [foundCardId] })
+            create_user_card_relationship(user_id=current_user.id, card_id=foundCardId)
+
             return {"message": "Utworzono kolekcję i dodano kartę"}
 
         else:
@@ -44,6 +58,7 @@ async def create(collection: Collection, current_user: Annotated[User, Depends(g
                     return {"message": "Podana karta jest już w kolekcji"}
             else:
                 result = cards_collection.update_one({ "user_id": current_user.id}, {'$push': { 'cards_id': {'$each': [foundCardId]}}})
+                create_user_card_relationship(user_id=current_user.id, card_id=foundCardId)
                 return {"message": "Dodano kartę do kolekcji. Obecna ilość kart w kolekcji wynosi: " + str(len(foundCollection['cards_id']) + 1)}
     else:
         return {"message": "Podana nazwa karty jest nieprawidłowa"}

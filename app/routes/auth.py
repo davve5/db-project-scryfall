@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 from pydantic import BaseModel, ConfigDict, Field
 from db.mongo import MongoManager
 from bson.objectid import ObjectId
+from db.neo4j import Neo4jManager
 
 BaseModel.model_config["json_encoders"] = {ObjectId: lambda v: str(v)}
 
@@ -151,6 +152,11 @@ async def register(
             detail="Username already taken",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    neo4j = Neo4jManager.get_instance()
+    query = "CREATE (n:User {id: $id, username: $username})"
+    neo4j.run(query, {"id": str(user.id), "username": form_data.username})
+
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": str(user.id)}, expires_delta=access_token_expires
