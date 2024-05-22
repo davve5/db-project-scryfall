@@ -35,7 +35,8 @@ async def create(deck: Deck, current_user: Annotated[User, Depends(get_current_u
         if foundDeck == None:
             decks.insert_one({"name": deck.deckName, "cards_id": [foundCardId], "user_id": current_user.id})
             return {"message": "Utworzono nową talię i dodano kartę"}
-
+        elif len(foundDeck['cards_id']) >= 40:
+            return {"message": "Osiągnięto limit kart w talii"}
         else:
             for card in foundDeck['cards_id']:
                 if card == foundCardId:
