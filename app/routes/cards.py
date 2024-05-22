@@ -138,7 +138,7 @@ async def search_cards(
     power: Optional[str] = None,
     toughness: Optional[str] = None,
     mana_cost: Optional[str] = None
-) :
+):
 
     query = {}
     if name is not None:

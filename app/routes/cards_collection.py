@@ -6,6 +6,7 @@ from typing import Annotated
 from app.routes.auth import get_current_user, User
 from PIL import Image
 import io
+from bson.objectid import ObjectId
 
 # from pymongo import MongoClient
 
@@ -62,4 +63,20 @@ async def show(current_user: Annotated[User, Depends(get_current_user)]):
     
     return {"message": "Wyświetlam zdjęcia kolekcji użytkownika"}
     
-    
+
+@router.get('/count/{card_id}')
+async def count(card_id: str):
+    count = cards_collection.aggregate([
+        {
+            "$match": { "cards_id": ObjectId(card_id) },
+        },
+        {
+             "$group": { "_id": "$user_id" }
+        },
+        {
+            "$count": "user_count"
+        }
+    ]).next()
+
+
+    return {"count": count.get('user_count')}

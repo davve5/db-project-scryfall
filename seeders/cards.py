@@ -3,26 +3,26 @@ from db.mongo import MongoManager
 
 
 def import_cards_to_mongo():
-		mongo = MongoManager.get_instance()
-		mongo['cards'].create_indexes({
-			name: 1,
-			color_identity: 1,
-			rarity: 1,
-			type_line: 1,
-			legalities: 1,
-			set_type: 1,
-			power: 1,
-			toughness: 1,
-			mana_cost: 1,
-		})
-		# with open("/Users/dawid/__DEV__/cards.json", 'r') as file:
-		# 	# Load JSON data
-		# 	data = json.load(file)
-		# 	res = mongo['cards'].insert_many(data)
-		# 	print(res)
+    mongo = MongoManager.get_instance()
+    mongo['cards'].create_indexes({
+        name: 1,
+        color_identity: 1,
+        rarity: 1,
+        type_line: 1,
+        legalities: 1,
+        set_type: 1,
+        power: 1,
+        toughness: 1,
+        mana_cost: 1,
+    })
+    # with open("/Users/dawid/__DEV__/cards.json", 'r') as file:
+    # 	# Load JSON data
+    # 	data = json.load(file)
+    # 	res = mongo['cards'].insert_many(data)
+    # 	print(res)
 
-			# res = mongo['cards'].insert_many(file_data)
-			# print(res)
+    # res = mongo['cards'].insert_many(file_data)
+    # print(res)
 # def import_cards():
 # 	for document in mongo_collection.find():
 # 		name = document.get('name')
