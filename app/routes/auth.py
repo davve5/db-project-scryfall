@@ -162,3 +162,12 @@ async def read_users_me(
     current_user: Annotated[User, Depends(get_current_user)],
 ):
     return current_user
+
+
+@router.post("/reset-password")
+async def reset_password(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+):
+    user = mongo['users'].find_one({ "username": form_data.username })
+    hashed_password = get_password_hash(form_data.password)
+    mongo['users'].update_one({"_id": user.get('_id')}, { "hashed_password": hashed_password })

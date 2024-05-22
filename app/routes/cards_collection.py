@@ -66,7 +66,7 @@ async def show(current_user: Annotated[User, Depends(get_current_user)]):
 
 @router.get('/count/{card_id}')
 async def count(card_id: str):
-    count = cards_collection.aggregate([
+    result = cards_collection.aggregate([
         {
             "$match": { "cards_id": ObjectId(card_id) },
         },
@@ -79,4 +79,4 @@ async def count(card_id: str):
     ]).next()
 
 
-    return {"count": count.get('user_count')}
+    return {"count": result.get('user_count')}
