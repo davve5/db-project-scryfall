@@ -6,8 +6,8 @@ from app.routes.auth import get_current_user, User
 from bson.objectid import ObjectId
 
 class Match(BaseModel):
-    enemy_id: str
     my_deck_id: str
+    enemy_id: str
     enemy_deck_id: str
     result: int
 		
