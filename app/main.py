@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from app.routes.main import api_router
-from seeders import cards, users, decks, cards_collection
+from seeders import cards, users, decks, cards_collection, matches
 
 app = FastAPI()
 
@@ -18,4 +18,6 @@ async def root():
     print("cards_collection inseted")
     decks.insert()
     print("decks inseted")
+    matches.insert()
+    print("matches inseted")
     return {"message": "neo4j seeded"}

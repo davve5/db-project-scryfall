@@ -4,6 +4,7 @@ from db.mongo import MongoManager
 from typing import Annotated
 from app.routes.auth import get_current_user, User
 from bson.objectid import ObjectId
+from db.neo4j import Neo4jManager
 
 class Match(BaseModel):
     my_deck_id: str
@@ -14,6 +15,20 @@ class Match(BaseModel):
 router = APIRouter()
 
 mongo = MongoManager.get_instance()
+
+
+
+def create_match_lost_won_relationship(winner_deck_id: str, looser_deck_id:str):
+    neo4j = Neo4jManager.get_instance()
+    params = { "winner_deck_id": str(winner_deck_id), "looser_deck_id": str(looser_deck_id) }
+    neo4j.run(
+        "MATCH (winner:Deck {id: $winner_deck_id}), (looser:Deck {id: $looser_deck_id}) CREATE (winner)-[:WON_AGAINST]->(looser)",
+        params
+    )
+    neo4j.run(
+        "MATCH (winner:Deck {id: $winner_deck_id}), (looser:Deck {id: $looser_deck_id}) CREATE (looser)-[:LOST_AGAINST]->(winner)",
+        params
+    )
 
 
 @router.post("/")
@@ -37,6 +52,8 @@ async def create_match(match: Match, current_user: Annotated[User, Depends(get_c
         "winner_deck": winner_deck.get('cards_id'),
         "looser_deck": looser_deck.get('cards_id'),
     })
+    
+    create_match_lost_won_relationship(winner_deck_id=winner_deck.get('_id'), looser_deck_id=looser_deck.get('_id'))
 
     return {"message": "Match created successfully"}
 
