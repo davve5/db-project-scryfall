@@ -170,11 +170,6 @@ class PopularCard(BaseModel):
     id: str
     popularity: int
 
-class CounterCard(BaseModel):
-    name: str
-    id: str
-    counter: int
-
 #TODO: change to recommended
 @router.get("/popular/{card_id}", response_model=List[PopularCard])
 def get_popular_cards(card_id: str):
@@ -194,58 +189,4 @@ def get_popular_cards(card_id: str):
     return cards
 
 
-@router.get("/win_probability/{card_id}")
-def get_card_win_probability(card_id: str):
-    neo4j = Neo4jManager.get_instance()
-    result = neo4j.run(
-        """
-            MATCH (d:Deck)-[:CONTAINS]->(c:Card {id: $card_id})
-            OPTIONAL MATCH (d)-[:WON_AGAINST]->(opponent:Deck)
-            WITH d, c, COUNT(opponent) AS wins
-            OPTIONAL MATCH (d)-[:LOST_AGAINST]->(opponent:Deck)
-            WITH c, wins, COUNT(opponent) AS losses
-            RETURN 
-               wins, 
-               losses
-        """,
-        {"card_id": card_id}
-    )
-    
-    win_count = 0
-    lose_count = 0
-    win_percent = 0
-    
-    for r in result:
-        win_count = win_count + r['wins']
-        lose_count = lose_count + r['losses']
-        
-    if win_count > 0:
-        if lose_count > 0:
-            win_percent = win_count / (win_count + lose_count)
-        else:
-            win_percent = 1
-    
-    win_percent = win_percent * 100
-    
-        
-    return {"message": "Podana karta ma współczynnik zwycięstwa równy: " + str(win_percent) + "% na " + str(win_count) + " wygrane mecze i " + str(lose_count) + " przegranych meczy."}
 
-
-@router.get("/card_counter/{card_id}", response_model=List[CounterCard])
-def get_card_counter(card_id: str):
-    neo4j = Neo4jManager.get_instance()
-    result = neo4j.run(
-        """
-            MATCH (d:Deck)-[:CONTAINS]->(c:Card {id: $card_id})
-            OPTIONAL MATCH (d)-[:LOST_AGAINST]->(opponent:Deck)
-            OPTIONAL MATCH (opponent)-[:CONTAINS]->(opponent_card:Card)
-            WITH opponent_card
-            RETURN opponent_card.name AS name, opponent_card.id AS id, COUNT(opponent_card) AS counter
-            ORDER BY counter DESC
-            LIMIT 5
-        """,
-        {"card_id": card_id}
-    )
-    
-        
-    return result

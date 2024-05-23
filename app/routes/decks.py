@@ -134,3 +134,29 @@ async def show(deck: Deck, current_user: Annotated[User, Depends(get_current_use
         image.show()
     
     return { "message": "Wyświetlam zdjęcia talii " + deck.deckName }
+
+class WinningPropability(BaseModel):
+    id: str
+    name: str
+    win_rate: float
+
+@router.get('/winning/{deck_id}', response_model=WinningPropability)
+async def winning_propability(deck_id: str):
+    neo4j = Neo4jManager.get_instance()
+    result = neo4j.run(
+        """
+            MATCH (d:Deck {id: $deck_id})
+            OPTIONAL MATCH (d)-[:WON_AGAINST]->(opponent)
+            WITH d, COUNT(opponent) AS wins
+            OPTIONAL MATCH (d)-[:WON_AGAINST|LOST_AGAINST]->(games)
+            WITH d, wins, COUNT(games) AS total_games
+            RETURN d.name AS name, d.id AS id,
+                CASE
+                    WHEN total_games > 0 THEN toFloat(wins) / toFloat(total_games) 
+                    ELSE 0
+                END AS win_rate
+        """,
+        {"deck_id": deck_id}
+    )
+
+    return result.single()
