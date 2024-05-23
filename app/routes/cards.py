@@ -62,7 +62,6 @@ class PurchaseUris(BaseModel):
 
 class Card(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    # FIXME: int | ObjectId = Field(alias="_id")
     object: str
     id: ObjectId = Field(alias="_id")
     multiverse_ids: List[int]
@@ -186,14 +185,14 @@ def get_popular_cards(card_id: str):
 
     cards = neo4j.run(
         """
-            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(deck:Deck)-[:CONTAINS]->(other_card:Card)
+            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(deck:Deck)-[:CONTAINS]->(other_card:Card {type_line: $type_line})
             WHERE other_card <> selected_card
             WITH other_card, COUNT(other_card) AS popularity
             ORDER BY popularity DESC
             LIMIT 5
             RETURN other_card.name AS name, other_card.id AS id, other_card.type_line AS type_line, popularity
         """,
-        {"card_id": card_id}
+        {"card_id": card_id, "type_line": type_line}
     )
 
     return cards
