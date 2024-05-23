@@ -170,6 +170,7 @@ class PopularCard(BaseModel):
     id: str
     popularity: int
 
+#TODO: change to recommended
 @router.get("/popular/{card_id}", response_model=List[PopularCard])
 def get_popular_cards(card_id: str):
     neo4j = Neo4jManager.get_instance()

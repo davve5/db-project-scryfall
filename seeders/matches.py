@@ -7,7 +7,7 @@ import random
 def insert():
     mongo = MongoManager.get_instance()
     neo4j = Neo4jManager.get_instance()
-
+    random.seed(1234)
     decks = mongo["decks"].find()
     decks = list(map(lambda x: x.get('_id'), decks))
 
