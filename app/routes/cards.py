@@ -170,6 +170,11 @@ class PopularCard(BaseModel):
     id: str
     popularity: int
 
+class CounterCard(BaseModel):
+    name: str
+    id: str
+    counter: int
+
 #TODO: change to recommended
 @router.get("/popular/{card_id}", response_model=List[PopularCard])
 def get_popular_cards(card_id: str):
@@ -225,3 +230,22 @@ def get_card_win_probability(card_id: str):
         
     return {"message": "Podana karta ma współczynnik zwycięstwa równy: " + str(win_percent) + "% na " + str(win_count) + " wygrane mecze i " + str(lose_count) + " przegranych meczy."}
 
+
+@router.get("/card_counter/{card_id}", response_model=List[CounterCard])
+def get_card_counter(card_id: str):
+    neo4j = Neo4jManager.get_instance()
+    result = neo4j.run(
+        """
+            MATCH (d:Deck)-[:CONTAINS]->(c:Card {id: $card_id})
+            OPTIONAL MATCH (d)-[:LOST_AGAINST]->(opponent:Deck)
+            OPTIONAL MATCH (opponent)-[:CONTAINS]->(opponent_card:Card)
+            WITH opponent_card
+            RETURN opponent_card.name AS name, opponent_card.id AS id, COUNT(opponent_card) AS counter
+            ORDER BY counter DESC
+            LIMIT 5
+        """,
+        {"card_id": card_id}
+    )
+    
+        
+    return result
