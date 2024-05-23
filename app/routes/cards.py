@@ -4,6 +4,7 @@ from pydantic import BaseModel, HttpUrl, Field, ConfigDict
 from db.mongo import MongoManager
 from bson.objectid import ObjectId
 import re
+from db.neo4j import Neo4jManager
 
 BaseModel.model_config["json_encoders"] = {ObjectId: lambda v: str(v)}
 
@@ -163,3 +164,28 @@ async def search_cards(
     cursor = mongo['cards'].find(query).limit(20)
 
     return cursor
+
+class PopularCard(BaseModel):
+    name: str
+    id: str
+    popularity: int
+
+@router.get("/popular/{card_id}", response_model=List[PopularCard])
+def get_popular_cards(card_id: str):
+    neo4j = Neo4jManager.get_instance()
+    cards = neo4j.run(
+        """
+            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(deck:Deck)-[:CONTAINS]->(other_card:Card)
+            WHERE other_card <> selected_card
+            WITH other_card, COUNT(other_card) AS popularity
+            ORDER BY popularity DESC
+            LIMIT 5
+            RETURN other_card.name AS name, other_card.id AS id, popularity
+        """,
+        {"card_id": card_id}
+    )
+
+    return cards
+
+
+

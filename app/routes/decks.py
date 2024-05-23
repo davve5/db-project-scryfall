@@ -27,7 +27,7 @@ def create_user_deck_relationship(user_id: str, deck_id: str):
     neo4j = Neo4jManager.get_instance()
     params = { "user_id": str(user_id), "deck_id": str(deck_id) }
     neo4j.run(
-        "MATCH (u:User {id: $user_id}), (d:Deck {id: $deck_id}) CREATE (u)-[:HAS_DECK]->(d)",
+        "MATCH (u:User {id: $user_id}), (d:Deck {id: $deck_id}) CREATE (u)-[:HAS]->(d)",
         params
     )
     neo4j.run(
@@ -51,7 +51,7 @@ def create_deck_card_relationship(deck_id: str, card_id: str):
         params
     )
     neo4j.run(
-        "MATCH (d:Deck {id: $deck_id}), (c:Card {id: $card_id}) CREATE (d)-[:HAS_CARD]->(c)",
+        "MATCH (d:Deck {id: $deck_id}), (c:Card {id: $card_id}) CREATE (d)-[:CONTAINS]->(c)",
         params
     )
 

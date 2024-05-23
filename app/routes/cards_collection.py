@@ -23,7 +23,7 @@ def create_user_card_relationship(user_id: str, card_id: str):
     neo4j = Neo4jManager.get_instance()
     params = { "user_id": str(user_id), "card_id": str(card_id) }
     neo4j.run(
-        "MATCH (u:User {id: $user_id}), (c:Card {id: $card_id}) CREATE (u)-[:HAS_CARD]->(c)",
+        "MATCH (u:User {id: $user_id}), (c:Card {id: $card_id}) CREATE (u)-[:HAS]->(c)",
         params
     )
     neo4j.run(

@@ -3,7 +3,7 @@ from db.mongo import MongoManager
 from db.neo4j import Neo4jManager
 
 
-def import_cards_to_neo4j():
+def insert():
     mongo = MongoManager.get_instance()
     neo4j = Neo4jManager.get_instance()
 
