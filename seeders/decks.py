@@ -42,18 +42,18 @@ def insert():
         
         
 
-        foundLogin = mongo['users'].find_one({ "username": userName })
+        foundLogin = mongo['users'].find_one({ "username": random_user })
 
         foundLoginId = foundLogin.get('_id')
         
         
         for card in random_cards:
             card_id = card.get('_id')
-            foundDeck = mongo['decks'].find_one({ "name": deckName, "user_id": foundLoginId })
+            foundDeck = mongo['decks'].find_one({ "name": deck_name, "user_id": foundLoginId })
             if foundDeck == None:
-                mongo['decks'].insert_one({"name": deckName, "cards_id": [card_id], "user_id": foundLoginId})
+                mongo['decks'].insert_one({"name": deck_name, "cards_id": [card_id], "user_id": foundLoginId})
             else:
-                mongo['decks'].update_one({'name': deckName, "user_id": foundLoginId}, {'$push': { 'cards_id': {'$each': [card_id]}}})
+                mongo['decks'].update_one({'name': deck_name, "user_id": foundLoginId}, {'$push': { 'cards_id': {'$each': [card_id]}}})
 
         
         
