@@ -177,6 +177,13 @@ class CounterCard(BaseModel):
     id: str
     counter: int
 
+
+
+class SynergyCard(BaseModel):
+    name: str
+    id: str
+    synergy: int
+
 #TODO: change to recommended
 @router.get("/popular/{card_id}", response_model=List[PopularCard])
 def get_popular_cards(card_id: str):
@@ -230,7 +237,7 @@ def get_card_win_probability(card_id: str):
     win_percent = win_percent * 100
 
 
-    return {"message": "Podana karta ma współczynnik zwycięstwa równy: " + str(win_percent) + "% na " + str(win_count) + " wygrane mecze i " + str(lose_count) + " przegranych meczy."}
+    return {"message": "The given card has a victory factor of: " + str(win_percent) + "% at " + str(win_count) + " won matches and " + str(lose_count) + " matches lost."}
 
 
 @router.get("/card_counter/{card_id}", response_model=List[CounterCard])
@@ -245,6 +252,26 @@ def get_card_counter(card_id: str):
             RETURN opponent_card.name AS name, opponent_card.id AS id, COUNT(opponent_card) AS counter
             ORDER BY counter DESC
             LIMIT 5
+        """,
+        {"card_id": card_id}
+    )
+
+
+    return result
+
+
+@router.get("/card_synergy/{card_id}", response_model=List[SynergyCard])
+def get_card_synergy(card_id: str):
+    neo4j = Neo4jManager.get_instance()
+    result = neo4j.run(
+        """
+            MATCH (selected_card:Card {id: '6645f2e139325dcce4040c14'})<-[:CONTAINS]-(d:Deck)-[:CONTAINS]->(other_card:Card)
+            WHERE other_card <> selected_card
+            OPTIONAL MATCH (d)-[:WON_AGAINST]->(opponent)
+            WITH other_card, d, COUNT(opponent) AS wins
+            ORDER BY wins DESC
+            LIMIT 5
+            RETURN other_card.name AS name, other_card.id AS id, wins
         """,
         {"card_id": card_id}
     )

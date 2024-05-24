@@ -48,20 +48,20 @@ async def create(collection: Collection, current_user: Annotated[User, Depends(g
             cards_collection.insert_one({ "user_id": current_user.id, "cards_id": [foundCardId] })
             create_user_card_relationship(user_id=current_user.id, card_id=foundCardId)
 
-            return {"message": "Utworzono kolekcję i dodano kartę"}
+            return {"message": "Collection created and card added"}
 
         else:
             for card in foundCollection['cards_id']:
                 if card == foundCardId:
                     duplicate = True
             if duplicate:
-                    return {"message": "Podana karta jest już w kolekcji"}
+                    return {"message": "Card already in collection"}
             else:
                 result = cards_collection.update_one({ "user_id": current_user.id}, {'$push': { 'cards_id': {'$each': [foundCardId]}}})
                 create_user_card_relationship(user_id=current_user.id, card_id=foundCardId)
-                return {"message": "Dodano kartę do kolekcji. Obecna ilość kart w kolekcji wynosi: " + str(len(foundCollection['cards_id']) + 1)}
+                return {"message": "Card added. Cards counter: " + str(len(foundCollection['cards_id']) + 1)}
     else:
-        return {"message": "Podana nazwa karty jest nieprawidłowa"}
+        return {"message": "Card not found"}
         
         
 @router.get("/show/")
@@ -76,7 +76,7 @@ async def show(current_user: Annotated[User, Depends(get_current_user)]):
     
         image.show()
     
-    return {"message": "Wyświetlam zdjęcia kolekcji użytkownika"}
+    return {"message": "Showing card collection images"}
     
 
 @router.get('/count/{card_id}')
@@ -95,3 +95,30 @@ async def count(card_id: str):
 
 
     return {"count": result.get('user_count')}
+    
+    
+    
+# FIXME: Niepotrzebne $ w nazwie route'a
+@router.delete("/user/{userid}/card/{cardid}")
+async def delete_card(userid, cardid):
+
+    user_id = ObjectId(userid)
+    
+    card_id = ObjectId(cardid)
+    
+    cards_collection.update_one({ "user_id": user_id }, { "$pull": { "cards_id": card_id } })
+
+    neo4j = Neo4jManager.get_instance()
+    params = { "user_id": str(user_id), "card_id": str(card_id) }
+
+    neo4j.run(
+        "MATCH (c:Card {id: $card_id})-[r:BELONGS_TO]->(u:User {id: $user_id}) DELETE r",
+        params
+    )
+
+    neo4j.run(
+        "MATCH (u:User {id: $user_id})-[r:HAS]->(c:Card {id: $card_id}) DELETE r",
+        params
+    )
+    
+    return {"message": "Card has been deleted"}

@@ -6,3 +6,6 @@ pyjwt
 pillow
 passlib
 bcrypt
+requests
+shutil
+base64
