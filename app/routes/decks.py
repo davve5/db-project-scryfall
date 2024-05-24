@@ -60,8 +60,10 @@ def create_deck_card_relationship(deck_id: str, card_id: str):
 # To powinny byc 2 metody
 @router.post("/create/")
 async def create(deck: Deck, current_user: Annotated[User, Depends(get_current_user)]):
-    card = cards.find_one({ "name": deck.cardName })
-    deck = decks.find_one({ "name": deck.deckName, "user_id": current_user.id })
+
+    foundCard = cards.find_one({ "name": deck.cardName })
+    foundDeck = decks.find_one({ "name": deck.deckName, "user_id": current_user.id })
+    duplicate = False
 
     if foundCard != None:
 

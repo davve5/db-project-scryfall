@@ -12,6 +12,13 @@ from db.neo4j import Neo4jManager
 class Collection(BaseModel):
     cardName: str
 		
+        
+class OwnedByCard(BaseModel):
+    id: str
+    owned_by: int
+    name: str
+
+
 router = APIRouter()
 
 mongo = MongoManager.get_instance()
@@ -98,14 +105,13 @@ async def count(card_id: str):
     
     
     
-# FIXME: Niepotrzebne $ w nazwie route'a
-@router.delete("/user/{userid}/card/{cardid}")
-async def delete_card(userid, cardid):
+@router.delete("/card/{cardid}")
+async def delete_card(cardid, current_user: Annotated[User, Depends(get_current_user)]):
 
-    user_id = ObjectId(userid)
-    
+    user_id = ObjectId(current_user.id)
+
     card_id = ObjectId(cardid)
-    
+
     cards_collection.update_one({ "user_id": user_id }, { "$pull": { "cards_id": card_id } })
 
     neo4j = Neo4jManager.get_instance()
@@ -120,5 +126,21 @@ async def delete_card(userid, cardid):
         "MATCH (u:User {id: $user_id})-[r:HAS]->(c:Card {id: $card_id}) DELETE r",
         params
     )
-    
+
     return {"message": "Card has been deleted"}
+    
+    
+@router.get("/owned_by/{card_id}", response_model=OwnedByCard)
+def get_owned_cards(card_id: str):
+    neo4j = Neo4jManager.get_instance()
+
+    cards = neo4j.run(
+        """
+            MATCH (c:Card {id: $card_id})-[:BELONGS_TO]->(u:User)
+            WITH c, COUNT(u) AS owned_by
+            RETURN c.id AS id, c.name AS name, owned_by
+        """,
+        {"card_id": card_id}
+    )
+
+    return cards.single()

@@ -174,7 +174,6 @@ class PopularCard(BaseModel):
 class CounterCard(BaseModel):
     id: str
     name: str
-    type_line: str
     counter: int
 
 
@@ -186,13 +185,17 @@ class SynergyCard(BaseModel):
 @router.get("/recommended/{card_id}", response_model=List[PopularCard])
 def get_popular_cards(card_id: str):
     neo4j = Neo4jManager.get_instance()
+    type_line = ""
+    
+    type_line = mongo['cards'].find_one({ "_id": ObjectId(card_id)}).get('type_line') or ""
 
-    type_line = mongo['cards'].find_one({ "_id": ObjectId(card_id)}).get('type_line')
+    if len(type_line) > 0:
+        type_line = type_line.split()[0]
 
     cards = neo4j.run(
         """
-            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(deck:Deck)-[:CONTAINS]->(other_card:Card {type_line: $type_line})
-            WHERE other_card <> selected_card
+            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(deck:Deck)-[:CONTAINS]->(other_card:Card)
+            WHERE other_card <> selected_card AND other_card.type_line CONTAINS $type_line
             WITH other_card, COUNT(other_card) AS popularity
             ORDER BY popularity DESC
             LIMIT 5
@@ -266,13 +269,13 @@ def get_card_synergy(card_id: str):
     neo4j = Neo4jManager.get_instance()
     result = neo4j.run(
         """
-            MATCH (selected_card:Card {id: '6645f2e139325dcce4040c14'})<-[:CONTAINS]-(d:Deck)-[:CONTAINS]->(other_card:Card)
+            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(d:Deck)-[:CONTAINS]->(other_card:Card)
             WHERE other_card <> selected_card
             OPTIONAL MATCH (d)-[:WON_AGAINST]->(opponent)
-            WITH other_card, d, COUNT(opponent) AS wins
-            ORDER BY wins DESC
+            WITH other_card, d, COUNT(opponent) AS synergy
+            ORDER BY synergy DESC
             LIMIT 5
-            RETURN other_card.name AS name, other_card.id AS id, wins
+            RETURN other_card.name AS name, other_card.id AS id, synergy
         """,
         {"card_id": card_id}
     )
