@@ -79,7 +79,7 @@ async def show(current_user: Annotated[User, Depends(get_current_user)]):
     return {"message": "Showing card collection images"}
     
 
-@router.get('/count/{card_id}')
+@router.get('/{card_id}/count')
 async def count(card_id: str):
     result = cards_collection.aggregate([
         {

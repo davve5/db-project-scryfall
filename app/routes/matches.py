@@ -14,9 +14,6 @@ class Match(BaseModel):
 		
 router = APIRouter()
 
-mongo = MongoManager.get_instance()
-
-
 
 def create_match_lost_won_relationship(winner_deck_id: str, looser_deck_id:str):
     neo4j = Neo4jManager.get_instance()
@@ -30,9 +27,9 @@ def create_match_lost_won_relationship(winner_deck_id: str, looser_deck_id:str):
         params
     )
 
-
 @router.post("/")
-async def create_match(match: Match, current_user: Annotated[User, Depends(get_current_user)]):
+async def create(match: Match, current_user: Annotated[User, Depends(get_current_user)]):
+    mongo = MongoManager.get_instance()
     enemy = mongo['users'].find_one({"_id": ObjectId(match.enemy_id)})
     
     winner_id = current_user.id
@@ -44,7 +41,7 @@ async def create_match(match: Match, current_user: Annotated[User, Depends(get_c
     winner_deck = mongo['decks'].find_one({ "_id": ObjectId(match.my_deck_id) })
     looser_deck = mongo['decks'].find_one({ "_id": ObjectId(match.enemy_deck_id) })
     
-    result = mongo['matches'].insert_one({
+    match = mongo['matches'].insert_one({
         "winner_id": winner_id,
         "loser_id": loser_id,
         "winner_deck_id": winner_deck.get('_id'),
@@ -55,15 +52,16 @@ async def create_match(match: Match, current_user: Annotated[User, Depends(get_c
     
     create_match_lost_won_relationship(winner_deck_id=winner_deck.get('_id'), looser_deck_id=looser_deck.get('_id'))
 
-    return {"message": "Match created successfully"}
+    return {"message": "Match created successfully", id: match.inserted_id}
 
 @router.get("/{match_id}", response_class=Match)
-async def create_user_matches(match_id: str):
-	# match = mongo['matches'].find_one({ "_id": match_id, "user_id": user_id })
-	return Match(**match)
-
+async def find_one(match_id: str):
+    mongo = MongoManager.get_instance()
+    match = mongo['matches'].find_one({ "_id": ObjectId(match_id), "user_id": ObjectId(user_id) })
+    return match
 
 @router.delete("/{match_id}")
-async def create_user_matches(match_id: str):
-	# cursor = mongo['matches'].find({ "_id": match_id, "user_id": user_id })
-	return list(cursor)
+async def delete(match_id: str):
+    mongo = MongoManager.get_instance()
+    mongo['matches'].delete_one({ "_id": ObjectId(match_id), "user_id": ObjectId(user_id) })
+    return {"message": "Match deleted"}

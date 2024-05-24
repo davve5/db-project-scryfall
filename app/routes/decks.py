@@ -60,15 +60,12 @@ def create_deck_card_relationship(deck_id: str, card_id: str):
 # To powinny byc 2 metody
 @router.post("/create/")
 async def create(deck: Deck, current_user: Annotated[User, Depends(get_current_user)]):
-    duplicate = False
-
-    foundCard = cards.find_one({ "name": deck.cardName })
-
-    foundDeck = decks.find_one({ "name": deck.deckName, "user_id": current_user.id })
+    card = cards.find_one({ "name": deck.cardName })
+    deck = decks.find_one({ "name": deck.deckName, "user_id": current_user.id })
 
     if foundCard != None:
 
-        foundCardId = foundCard.get('_id')
+        foundCardId = foundCard.get("_id")
         # Pierwszy route /create
         if foundDeck == None:
             # FIXME: Propably upsert? To be checked
@@ -76,26 +73,30 @@ async def create(deck: Deck, current_user: Annotated[User, Depends(get_current_u
             create_deck(id=result.inserted_id, name=deck.deckName)
             create_user_deck_relationship(user_id=current_user.id, deck_id=result.inserted_id)
             create_deck_card_relationship(deck_id=result.inserted_id, card_id=foundCardId)
+
             return {"message": "New deck created. Added card"}
         elif len(foundDeck['cards_id']) >= 40:
             return {"message": "Deck limit reached"}
         else:
-            for card in foundDeck['cards_id']:
+            for card in foundDeck["cards_id"]:
                 if card == foundCardId:
                     duplicate = True
             if duplicate:
                     return {"message": "Card already in deck"}
             else:
                 # Drugi route /update
+
                 result = decks.update_one({'name': deck.deckName, "user_id": current_user.id}, {'$push': { 'cards_id': {'$each': [foundCardId]}}})
                 deck = decks.find_one({'name': deck.deckName, "user_id": current_user.id})
                 create_user_deck_relationship(user_id=current_user.id, deck_id=deck.get('_id'))
                 create_deck_card_relationship(deck_id=deck.get('_id'), card_id=foundCardId)
                 return {"message": "Card added. Cards currently in deck: " + str(len(foundDeck['cards_id']) + 1)}
+
     else:
         return {"message": "Card name not found"}
         
         
+
 @router.delete("/deck/{id}/")
 async def delete_deck(id):
 
@@ -147,8 +148,7 @@ async def delete_card(deckid, cardid):
 
 @router.get("/show/")
 async def show(deck: Deck, current_user: Annotated[User, Depends(get_current_user)]):
-
-    foundDeck = decks.find_one({ "name":deck.deckName, "user_id": current_user.id })
+    foundDeck = decks.find_one({ "name": deck.deckName, "user_id": current_user.id })
 
     for card in foundDeck["cards_id"]:
         foundCard = cards.find_one({ "_id": card })
@@ -164,7 +164,7 @@ class WinningPropability(BaseModel):
     name: str
     win_rate: float
 
-@router.get('/winning/{deck_id}', response_model=WinningPropability)
+@router.get("/{deck_id}/winning", response_model=WinningPropability)
 async def winning_propability(deck_id: str):
     neo4j = Neo4jManager.get_instance()
     result = neo4j.run(

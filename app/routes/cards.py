@@ -62,14 +62,13 @@ class PurchaseUris(BaseModel):
 
 class Card(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
-    # FIXME: int | ObjectId = Field(alias="_id")
     object: str
     id: ObjectId = Field(alias="_id")
     multiverse_ids: List[int]
-    mtgo_id: int | ObjectId = Field(alias="_id")
-    mtgo_foil_id: int | ObjectId = Field(alias="_id")
-    tcgplayer_id: int | ObjectId = Field(alias="_id")
-    cardmarket_id: int | ObjectId = Field(alias="_id")
+    mtgo_id: Optional[int] = None
+    mtgo_foil_id: Optional[int] = None
+    tcgplayer_id: Optional[int] = None
+    cardmarket_id: Optional[int] = None
     name: str
     lang: str
     released_at: str
@@ -78,13 +77,13 @@ class Card(BaseModel):
     layout: str
     highres_image: bool
     image_status: str
-    image_uris: ImageUris | ObjectId = Field(alias="_id")
-    mana_cost: str | ObjectId = Field(alias="_id")
-    cmc: float | ObjectId = Field(alias="_id")
-    type_line: str | ObjectId = Field(alias="_id")
-    power: str | ObjectId = Field(alias="_id")
-    toughness: str | ObjectId = Field(alias="_id")
-    colors: List[str] | ObjectId = Field(alias="_id")
+    image_uris: Optional[ImageUris] = None
+    mana_cost: Optional[str] = None
+    cmc: Optional[float] = None
+    type_line: Optional[str] = None
+    power: Optional[str] = None
+    toughness: Optional[str] = None
+    colors: List[str] = []
     color_identity: List[str]
     keywords: List
     legalities: Legalities
@@ -109,21 +108,21 @@ class Card(BaseModel):
     collector_number: str
     digital: bool
     rarity: str
-    flavor_text: str | ObjectId = Field(alias="_id")
-    card_back_id: str | ObjectId = Field(alias="_id")
+    flavor_text: Optional[str] = None
+    card_back_id: Optional[str] = None
     artist: str
-    artist_ids: List[str] | ObjectId = Field(alias="_id")
-    illustration_id: str | ObjectId = Field(alias="_id")
+    artist_ids: List[str] = []
+    illustration_id: Optional[str] = None
     border_color: str
     frame: str
     full_art: bool
     textless: bool
     booster: bool
     story_spotlight: bool
-    edhrec_rank: int | ObjectId = Field(alias="_id")
-    penny_rank: int | ObjectId = Field(alias="_id")
+    edhrec_rank: Optional[int] = None
+    penny_rank: Optional[int] = None
     prices: Prices
-    purchase_uris: PurchaseUris | ObjectId = Field(alias="_id")
+    purchase_uris: Optional[PurchaseUris] = None
 
 
 mongo = MongoManager.get_instance()
@@ -147,7 +146,7 @@ async def search_cards(
     if color_identity is not None:
         query["color_identity"] = color_identity.capitalize()
     if rarity is not None:
-        query["rarity"] = rarity
+        query["rarity"] = rarity.lower()
     if type_line is not None:
         query["type_line"] = type_line
     if legalities is not None:
@@ -173,10 +172,10 @@ class PopularCard(BaseModel):
     
 
 class CounterCard(BaseModel):
-    name: str
     id: str
+    name: str
+    type_line: str
     counter: int
-
 
 
 class SynergyCard(BaseModel):
@@ -184,20 +183,22 @@ class SynergyCard(BaseModel):
     id: str
     synergy: int
 
-#TODO: change to recommended
-@router.get("/popular/{card_id}", response_model=List[PopularCard])
+@router.get("/recommended/{card_id}", response_model=List[PopularCard])
 def get_popular_cards(card_id: str):
     neo4j = Neo4jManager.get_instance()
+
+    type_line = mongo['cards'].find_one({ "_id": ObjectId(card_id)}).get('type_line')
+
     cards = neo4j.run(
         """
-            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(deck:Deck)-[:CONTAINS]->(other_card:Card)
+            MATCH (selected_card:Card {id: $card_id})<-[:CONTAINS]-(deck:Deck)-[:CONTAINS]->(other_card:Card {type_line: $type_line})
             WHERE other_card <> selected_card
             WITH other_card, COUNT(other_card) AS popularity
             ORDER BY popularity DESC
             LIMIT 5
-            RETURN other_card.name AS name, other_card.id AS id, popularity
+            RETURN other_card.name AS name, other_card.id AS id, other_card.type_line AS type_line, popularity
         """,
-        {"card_id": card_id}
+        {"card_id": card_id, "type_line": type_line}
     )
 
     return cards
