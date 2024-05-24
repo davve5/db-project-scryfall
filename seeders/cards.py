@@ -1,11 +1,24 @@
 import json
 from db.mongo import MongoManager
 from db.neo4j import Neo4jManager
-
+from pymongo import MongoClient
 
 def insert():
     mongo = MongoManager.get_instance()
     neo4j = Neo4jManager.get_instance()
+
+    json_path = 'seeders/json_files/mtg.cards.json'
+
+
+    with open(json_path, 'r', encoding='utf-8') as file:
+        data = json.load(file)
+        
+        
+        if isinstance(data, dict):
+            data = [data]
+        
+        mongo["cards"].insert_many(data)
+
 
     for document in mongo["cards"].find():
         id = str(document.get('_id'))

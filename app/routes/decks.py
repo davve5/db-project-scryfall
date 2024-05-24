@@ -73,34 +73,76 @@ async def create(deck: Deck, current_user: Annotated[User, Depends(get_current_u
             create_deck(id=result.inserted_id, name=deck.deckName)
             create_user_deck_relationship(user_id=current_user.id, deck_id=result.inserted_id)
             create_deck_card_relationship(deck_id=result.inserted_id, card_id=foundCardId)
-            return {"message": "Utworzono nową talię i dodano kartę"}
-        elif len(foundDeck["cards_id"]) >= 40:
-            return {"message": "Osiągnięto limit kart w talii"}
+
+            return {"message": "New deck created. Added card"}
+        elif len(foundDeck['cards_id']) >= 40:
+            return {"message": "Deck limit reached"}
         else:
             for card in foundDeck["cards_id"]:
                 if card == foundCardId:
                     duplicate = True
             if duplicate:
-                    return {"message": "Podana karta jest już w talii"}
+                    return {"message": "Card already in deck"}
             else:
                 # Drugi route /update
-                result = decks.update_one({"name": deck.deckName, "user_id": current_user.id}, {"$push": { "cards_id": {"$each": [foundCardId]}}})
-                deck = decks.find_one({"name": deck.deckName, "user_id": current_user.id})
-                create_user_deck_relationship(user_id=current_user.id, deck_id=deck.get("_id"))
-                create_deck_card_relationship(deck_id=deck.get("_id"), card_id=foundCardId)
-                return {"message": "Dodano kartę do talii. Obecna ilość kart w talii wynosi: " + str(len(foundDeck["cards_id"]) + 1)}
+
+                result = decks.update_one({'name': deck.deckName, "user_id": current_user.id}, {'$push': { 'cards_id': {'$each': [foundCardId]}}})
+                deck = decks.find_one({'name': deck.deckName, "user_id": current_user.id})
+                create_user_deck_relationship(user_id=current_user.id, deck_id=deck.get('_id'))
+                create_deck_card_relationship(deck_id=deck.get('_id'), card_id=foundCardId)
+                return {"message": "Card added. Cards currently in deck: " + str(len(foundDeck['cards_id']) + 1)}
+
     else:
-        return {"message": "Podana nazwa karty jest nieprawidłowa"}
+        return {"message": "Card name not found"}
         
         
-@router.delete("/{deck_id}")
-async def delete(deck_id: str, current_user: Annotated[User, Depends(get_current_user)]):
-    decks.delete_one({ "_id": ObjectId(id), "user_id": ObjectId(current_user.id) })
+
+@router.delete("/deck/{id}/")
+async def delete_deck(id):
+
+    # FIXME: ObjectId(id)
+    # Nie musisz sprawdzac czy istnieje przed usunieciem, uwuanie rzuca wyjatek to wystarczy
+    deck_id = ObjectId(id)
+    found_deck = decks.find_one({ "_id": deck_id })
+
+    if found_deck is None:
+        raise HTTPException(status_code=404, detail="Deck not found")
+
+    decks.delete_one({ "_id": deck_id })
+    
+    neo4j = Neo4jManager.get_instance()
+    params = { "deck_id": str(deck_id) }
+
+    neo4j.run(
+        "MATCH (d:Deck {id: $deck_id}) DETACH DELETE d",
+        params
+)
+
     return {"message": "Deck has been deleted"}
 
-@router.patch("/{deck_id}/card/{card_id}")
-async def delete_card(deck_id: str, card_id: str):
-    decks.update_one({ "_id": ObjectId(deck_id) }, { "$pull": { "decks.cards_id": ObjectId(card_id) } })
+# FIXME: Niepotrzebne $ w nazwie route'a
+@router.delete("/deck/{deckid}/card/{cardid}")
+async def delete_card(deckid, cardid):
+
+    deck_id = ObjectId(deckid)
+    
+    card_id = ObjectId(cardid)
+    
+    decks.update_one({ "_id": deck_id }, { "$pull": { "cards_id": card_id } })
+
+    neo4j = Neo4jManager.get_instance()
+    params = { "deck_id": str(deck_id), "card_id": str(card_id) }
+
+    neo4j.run(
+        "MATCH (c:Card {id: $card_id})-[r:BELONGS_TO]->(d:Deck {id: $deck_id}) DELETE r",
+        params
+    )
+
+    neo4j.run(
+        "MATCH (d:Deck {id: $deck_id})-[r:CONTAINS]->(c:Card {id: $card_id}) DELETE r",
+        params
+    )
+    
     return {"message": "Card has been deleted"}
 
 
@@ -115,7 +157,7 @@ async def show(deck: Deck, current_user: Annotated[User, Depends(get_current_use
     
         image.show()
     
-    return { "message": "Wyświetlam zdjęcia talii " + deck.deckName }
+    return { "message": "Showing deck images " + deck.deckName }
 
 class WinningPropability(BaseModel):
     id: str
