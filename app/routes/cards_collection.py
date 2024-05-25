@@ -15,8 +15,9 @@ class Collection(BaseModel):
         
 class OwnedByCard(BaseModel):
     id: str
-    owned_by: int
     name: str
+    owned_by: int
+    all_users: int
 
 
 router = APIRouter()
@@ -130,7 +131,7 @@ async def delete_card(cardid, current_user: Annotated[User, Depends(get_current_
     return {"message": "Card has been deleted"}
     
     
-@router.get("/owned_by/{card_id}", response_model=OwnedByCard)
+@router.get("/owned_by/{card_id}")
 def get_owned_cards(card_id: str):
     neo4j = Neo4jManager.get_instance()
 
@@ -138,9 +139,13 @@ def get_owned_cards(card_id: str):
         """
             MATCH (c:Card {id: $card_id})-[:BELONGS_TO]->(u:User)
             WITH c, COUNT(u) AS owned_by
-            RETURN c.id AS id, c.name AS name, owned_by
+            MATCH (n:User)
+            WITH c, owned_by, COUNT(n) AS all_users
+            RETURN c.id AS id, c.name AS name, owned_by, all_users
         """,
         {"card_id": card_id}
     )
+    
+    result = cards.single()
 
-    return cards.single()
+    return {"message": "The card " + result['name'] + "is owned by: " + str((result['owned_by'] / result['all_users']) * 100) + "% of users."}
