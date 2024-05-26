@@ -183,6 +183,9 @@ async def get_my_cards(current_user: Annotated[User, Depends(get_current_user)])
                 "cards.name": 1,
                 "cards._id": 1,
             }
+        },
+        {
+            "$limit": 200
         }
     ])
 
