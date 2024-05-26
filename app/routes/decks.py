@@ -1,15 +1,16 @@
 from fastapi import APIRouter, status, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from db.mongo import MongoManager
 from pymongo import MongoClient
-from typing import Annotated
-from app.routes.auth import get_current_user, User
+from typing import Annotated, List
 from PIL import Image
 import io
 from app.routes.cards_collection import create_user_card_relationship
+from app.routes.auth import get_current_user, User
 from db.neo4j import Neo4jManager
 from bson.objectid import ObjectId
 # from pymongo import MongoClient
+BaseModel.model_config["json_encoders"] = {ObjectId: lambda v: str(v)}
 
 class Deck(BaseModel):
     cardName: str
@@ -98,6 +99,43 @@ async def create(deck: Deck, current_user: Annotated[User, Depends(get_current_u
         return {"message": "Card name not found"}
         
         
+class Cards(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    id: ObjectId = Field(alias="_id")
+    name: str
+    type_line: str
+class GetDeckCards(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    id: ObjectId = Field(alias="_id")
+    cards: List[Cards]
+
+@router.get("/{deck_id}", response_model=List[GetDeckCards])
+async def show_deck_cards(deck_id: str, current_user: Annotated[User, Depends(get_current_user)]):
+    cards = mongo['decks'].find({ "_id": ObjectId(deck_id), "user_id": ObjectId(current_user.id)})
+    cards = decks.aggregate([
+        {
+            "$match": {
+                "_id": ObjectId(deck_id),
+            }
+        },
+        {
+            "$lookup": {
+                "from": "cards",
+                "localField": "cards_id",
+                "foreignField": "_id",
+                "as": "cards"
+            }
+        },
+        {
+            "$project": {
+                "cards.type_line": 1,
+                "cards.name": 1,
+                "cards._id": 1,
+            }
+        }
+    ])
+
+    return cards
 
 @router.delete("/deck/{id}/")
 async def delete_deck(id):
