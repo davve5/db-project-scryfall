@@ -179,10 +179,24 @@ async def get_my_cards(current_user: Annotated[User, Depends(get_current_user)])
         },
         {
             "$project": {
-                "cards": { "$slice": ["$cards", 200] },
-                "cards.type_line": 1,
-                "cards.name": 1,
-                "cards._id": 1,
+                "cards": {
+                    "$slice": ["$cards", 200]  # Limit to 200 cards per deck
+                }
+            }
+        },
+        {
+            "$project": {
+                "cards": {
+                    "$map": {
+                        "input": "$cards",
+                        "as": "card",
+                        "in": {
+                            "_id": "$$card._id",
+                            "type_line": "$$card.type_line",
+                            "name": "$$card.name"
+                        }
+                    }
+                }
             }
         }
     ])
