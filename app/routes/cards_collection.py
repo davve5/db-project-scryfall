@@ -1,8 +1,8 @@
 from fastapi import APIRouter, status, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from db.mongo import MongoManager
 from pymongo import MongoClient
-from typing import Annotated
+from typing import Annotated, List
 from app.routes.auth import get_current_user, User
 from PIL import Image
 import io
@@ -149,3 +149,41 @@ def get_owned_cards(card_id: str):
     result = cards.single()
 
     return {"message": "The card " + result['name'] + "is owned by: " + str((result['owned_by'] / result['all_users']) * 100) + "% of users."}
+
+
+class Cards(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    id: ObjectId = Field(alias="_id")
+    name: str
+    type_line: str
+class GetMyCards(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    id: ObjectId = Field(alias="_id")
+    cards: List[Cards]
+
+@router.get("/", response_model=GetMyCards)
+async def get_my_cards(current_user: Annotated[User, Depends(get_current_user)]):
+    collection = cards_collection.aggregate([
+        {
+            "$match": {
+                "user_id": ObjectId(current_user.id),
+            }
+        },
+        {
+            "$lookup": {
+                "from": "cards",
+                "localField": "cards_id",
+                "foreignField": "_id",
+                "as": "cards"
+            }
+        },
+        {
+            "$project": {
+                "cards.type_line": 1,
+                "cards.name": 1,
+                "cards._id": 1,
+            }
+        }
+    ])
+
+    return collection.next()

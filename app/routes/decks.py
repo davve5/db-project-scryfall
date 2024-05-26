@@ -109,9 +109,8 @@ class GetDeckCards(BaseModel):
     id: ObjectId = Field(alias="_id")
     cards: List[Cards]
 
-@router.get("/{deck_id}", response_model=List[GetDeckCards])
+@router.get("/{deck_id}", response_model=GetDeckCards)
 async def show_deck_cards(deck_id: str, current_user: Annotated[User, Depends(get_current_user)]):
-    cards = mongo['decks'].find({ "_id": ObjectId(deck_id), "user_id": ObjectId(current_user.id)})
     cards = decks.aggregate([
         {
             "$match": {
@@ -135,7 +134,7 @@ async def show_deck_cards(deck_id: str, current_user: Annotated[User, Depends(ge
         }
     ])
 
-    return cards
+    return cards.next()
 
 @router.delete("/deck/{id}/")
 async def delete_deck(id):
