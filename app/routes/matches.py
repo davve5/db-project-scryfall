@@ -74,8 +74,7 @@ async def create(match: Match, current_user: Annotated[User, Depends(get_current
     })
 
     create_match_lost_won_relationship(winner_deck_id=winner_deck.get('_id'), looser_deck_id=looser_deck.get('_id'))
-
-    return {"message": "Match created successfully", id: match.inserted_id}
+    return {"message": "Match created successfully"}
 
 @router.get("/{match_id}")
 async def find_one(match_id: str, current_user: Annotated[User, Depends(get_current_user)]):
